@@ -1,0 +1,353 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>咻蹦躲雪球</title>
+<script src="/p5.min.js"></script>
+<script src="/p5.sound.min.js"></script>
+<style>
+body{margin:0 auto;text-align:center;background:#222222 !important;color:white;}
+#p5_loading{margin:100px auto;text-align:center;left:50%;margin-left:-45px;font-size:24px;}
+</style>
+<script>
+var start = false, gameover = false;
+var player;
+var fontStyle, bgsound;
+var bg;
+var coreKey;
+var object = [], food = null;
+var points = 0, time = 0, endTime = 0, maxScore = 0;
+// var score //points
+
+function securitySystem(){
+  var error = '';
+  var errorColor = 255;
+  var turn = 1;
+  document.body.style.margin = "100px auto";
+  setInterval(function(){
+    if(errorColor==255){
+      error = "！！";
+      turn = -1
+    }else if(errorColor==180){
+      error = "！";
+      turn = 1;
+    }
+    errorColor+=turn;
+    // errorColor = errorColor%255==0?1:errorColor+turn;
+    document.body.style.color = `rgb(${errorColor}, 0, 0)`;
+    document.body.style.background = `rgb(${errorColor}, 0, 0)`;
+    document.body.innerHTML = `<h1>核心被惡意串改</h1><b>${error}請立即停止遊戲${error}</b>`;
+  },10);
+}
+
+function preload() {
+  coreKey = loadStrings("/core");
+  bg = loadImage("/咻蹦躲雪球/background.jpg");
+  // fontStyle = loadFont("/font/8-BIT_WONDER.TTF");
+  fontStyle = loadFont("/font/JF-Dot-Elisa8.TTF");
+  bgsound = loadSound("/咻蹦躲雪球/Happy_Little_Elves.mp3");
+}
+
+function setup(){
+  coreKey = coreKey[0].split(",");
+  coreKey.map((keyCode, n) => {
+    if(parseInt(keyCode)-core.z[n]!==core.m[n]){
+      return securitySystem();
+    }else if(parseInt(keyCode)-core.m[n]!==core.z[n]){
+      return securitySystem();
+    }
+  });
+  createCanvas(600, 600);
+  textSize(9);
+  textFont(fontStyle);
+  player = new actor({
+    x:width/2,
+    y:height-36,
+    face:{
+      default:",,・ω・,,",
+    },movement:{
+      left:"a",
+      right:"d",
+      up:"w",
+      say:"s",
+    },
+    msg:"Help!!!"||[73, 32, 76, 111, 118, 101, 32, 77, 101, 111, 119, 32, 77, 101, 111, 119].map(n=>String.fromCharCode(n)).join(""),
+  });
+}
+
+function draw(){
+  image(bg, 0, 0);
+  // background(255);
+  // fill("#FFFAFA");
+  fill("#5E97BC");
+  // stroke("#5E97BC");
+  // noStroke();
+  rect(-1, height-20, width+1, 20);
+  player.run(start);
+  fill(255);
+  // stroke(255);
+  ellipse(10, 10, 10,10);
+  object.map((obj, i) => {
+    obj.run(start);
+    if(obj.y>player.y-player.size*0.65/2&&obj.y<player.y+player.size*0.65/2&&obj.x>player.x-player.size/2&&obj.x<player.x+player.size/2){
+      start = false;
+      gameover = true;
+    }
+    if(obj.distory){
+      object.splice(i, 1);
+    }
+  })
+  fill(0);
+  textSize(36);
+  if(start){
+    time--;
+    var lastTime = Math.ceil(time/50);
+    var source = `剩餘時間: ${lastTime} 秒, 總分: ${points}`;
+    text(source, width/2-textWidth(source)/2, 50);
+    if(object.length<20&&Math.random()>0.9){
+      object.push(new showBall({
+        x:Math.random()*(width),
+        y:10,
+        size:~~(Math.random()*5)+8
+      }));
+    }
+    if(food){
+      food.display();
+      if(food.x>=player.x-player.size/2&&food.x<=player.x+player.size/2){
+        points+=food.points;
+        food = null;
+        player.slide = 0;
+        player.moveSpeed = 0;
+      }
+    }else{
+      food = new foodObject({
+        x:Math.random()*width,
+        y:player.y
+      })
+    }
+    if(lastTime<=0){
+      if(points>maxScore)
+        maxScore = points;
+      endTime = new Date();
+      start = false;
+    }
+  }else{
+    var title = "按 k 開始遊戲";
+    var lastPlay = `這次遊玩分數: ${points}, 最高分: ${maxScore}`;
+    text(title, width/2-textWidth(title)/2, 60);
+    text(lastPlay, width/2-textWidth(lastPlay)/2, 120);
+    if(gameover){
+      textSize(100);
+      var gameOverMessage = "Game Over";
+      text(gameOverMessage, width/2-textWidth(gameOverMessage)/2, height/2);
+      bgsound.stop();
+    }
+    if(key.toLowerCase()==="k"&&keyIsPressed){
+      bgsound.play();
+      points = 0;
+      time = 50*30;
+      food = null;
+      object = [];
+      start = true;
+      gameover = false;
+    }
+  }
+}
+
+function actor(setting){
+  this.x = setting.x;
+  this.y = setting.y;
+  this.face = {
+    direction:{
+      x:0,
+      y:0
+    },
+    now:setting.face.default,
+    default:setting.face.default,
+    // left:setting.face.left,
+    // right:setting.face.right,
+  }
+  this.size = textWidth(setting.face.default);
+  this.slide = 0;
+  this.distory = false;
+  this.movement = {
+    left:setting.movement.left,
+    right:setting.movement.right,
+    say:setting.movement.say,
+    up:setting.movement.up,
+  };
+  this.message = {
+    show:false,
+    text:setting.msg,
+  };
+  this.moveSpeed = 0;
+}
+
+actor.prototype.run = function(status){
+  for(var i=0;i<2;i++){
+    if(status)
+      this.move();
+    this.display();
+  }
+}
+
+actor.prototype.move = function(direction, release = false){
+  var temp = 0;
+  if(release){
+    switch(true){
+      case this.movement.left===direction||this.movement.right===direction:
+        this.face.direction.x = 0;
+        this.moveSpeed = 0;
+      break;
+      case direction===this.movement.say:
+        this.message.show = false;
+      break;
+      case direction===this.movement.up:
+        this.face.direction.y = 0;
+      break;
+    }
+    /* if(this.movement.left===direction||this.movement.right===direction){
+      this.face.direction.x = 0;
+      this.face.now = this.face.default;
+      this.moveSpeed = 0;
+    }else if(this.movement.say===direction){
+      this.message.show = false;
+    }else if(this.movement.up===direction){
+      this.face.direction.y = 0;
+    } */
+  }else{
+    switch(true){
+      case direction===this.movement.left:
+        if(this.slide>-1.5)
+          this.slide-=0.1;
+        this.moveSpeed = -1;
+        this.face.direction.x = -3;
+        temp = Math.max(this.moveSpeed+this.slide, -1);
+      break;
+      case direction===this.movement.right:
+        if(this.slide<1.5)
+          this.slide+=0.1;
+        this.moveSpeed = 1;
+        this.face.direction.x = 3;
+        temp = Math.min(this.moveSpeed+this.slide, 1);
+      break;
+      case direction===this.movement.say:
+        this.message.show = true;
+      break;
+      case direction===this.movement.up:
+        this.face.direction.y = -4;
+      break;
+    }
+    /* if(direction===this.movement.left){
+      this.moveSpeed = -1;
+      this.face.direction.x = -3;
+    }else if(direction===this.movement.right){
+      this.moveSpeed = 1;
+      this.face.direction.x = 3;
+    }else if(direction===this.movement.say){
+      this.message.show = true;
+    }else if(direction===this.movement.up){
+      this.face.direction.y = -4;
+    } */
+  }
+
+  if(this.slide>0){
+    this.slide-=0.005;
+  }else if(this.slide<0){
+    this.slide+=0.005;
+  }
+  // console.log(this.slide);
+  var nd = this.x+(this.moveSpeed+this.slide);
+  // var nd = this.x+(temp);
+  if(nd-this.size/2<=0){
+    this.x = this.size/2;
+  }else if(nd+this.size/2>=width){
+    this.x = width-this.size/2;
+  }else{
+    this.x = nd;
+  }
+}
+
+actor.prototype.display = function(){
+  textSize(10);
+  fill(255);
+  // stroke(0);
+  ellipse(this.x, this.y, this.size, this.size*.65);
+  var x = this.x-textWidth(this.face.now)/2+this.face.direction.x,
+      y = this.y+3+this.face.direction.y;
+  fill(0);
+  text(this.face.now, x, y);
+  if(this.message.show){
+    textSize(16);
+    text(this.message.text, this.x+8, this.y-16);
+  }
+}
+
+function showBall(setting){
+  this.x = setting.x;
+  this.y = setting.y;
+  this.size = setting.size;
+  this.gravity = 0.1225;
+  this.acceleration = 0;
+  this.speed = 5;
+  this.distory = false;
+  this.moveSpeed = 0;
+  this.direction = setting.x<width/2?1:-1;
+}
+
+showBall.prototype.run = function(status){
+  if(status)
+    this.move();
+  this.display();
+}
+
+showBall.prototype.move = function(){
+  this.acceleration+=this.gravity;
+  this.y+=this.acceleration;
+  this.moveSpeed<this.speed*2?this.moveSpeed+=(this.speed/5+this.size/10):true;
+  this.x+=this.moveSpeed/5*this.direction;
+  if(this.x>width||this.x<0||this.y>height)
+    this.distory = true;
+  // this.speed+=this.direction*(this.size/10);
+}
+
+showBall.prototype.display = function(){
+  fill(255);
+  // stroke(255);
+  ellipse(this.x, this.y, this.size, this.size);
+}
+
+function foodObject(setting){
+  this.x = setting.x;
+  this.y = setting.y;
+  this.points = ~~(Math.random()*25);
+  this.distory = false;
+}
+
+foodObject.prototype.display = function(){
+  fill(255-this.points*10, 255, this.points);
+  rect(this.x, this.y, 10, 10);
+}
+
+function keyControl(event){
+  if(!start)return;
+  var key = event.key.toLowerCase();
+  player.move(key);
+}
+
+function keyRelease(event){
+  if(!start)return;
+  player.move(event.key.toLowerCase(), true);
+}
+
+window.onkeyup = keyRelease
+window.onkeydown = keyControl;
+const core = {
+  z:[21941, 21941, 126, 126, 25105, 22909, 24859, 22963, 119],
+  m:[25105, 20063, 24859, 20320, 23447, 23447, 119, 119, 119],
+};
+</script>
+</head>
+<body>
+</body>
+</html>

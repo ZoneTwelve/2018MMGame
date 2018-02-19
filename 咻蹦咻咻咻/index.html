@@ -1,0 +1,360 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>咻繃咻咻咻</title>
+<script src="/p5.min.js"></script>
+<script src="/p5.sound.min.js"></script>
+<style>
+body{margin:0 auto;text-align:center;background:#222222 !important;color:white;}
+#p5_loading{margin:100px auto;text-align:center;left:50%;margin-left:-45px;font-size:24px;}
+</style>
+<script>
+//<div id="p5_loading" style="position: absolute;">Loading...</div>
+var start = false;
+var player, enemy, object, backgroundImage, bg;
+var score = 0, time = 0, endTime = 0;
+var maxPoint = 0;
+var sound = new Object();
+// const backgroundImageURL = "./bg.jpg";
+// function preload(){
+  // backgroundImage = loadImage(backgroundImageURL);
+// }
+var bgimg, bg, backgroundMusic;
+
+function preload() {
+  bgimg = loadImage('/咻蹦咻咻咻/background.jpg');
+  // sound.laser1 = loadSound('laser1.mp3');
+  // sound.laser2 = loadSound('laser2.mp3');
+  sound.shot1 = loadSound('/sound/gunshot.mp3');
+  backgroundMusic = loadSound('/sound/If_I_Had_a_Chicken.mp3');
+}
+
+function setup(){
+  createCanvas(600, 600);
+  player = new actor({
+    width:width,
+    height:height,
+    size:20,
+    movement:{
+      left:"a",
+      right:"d"
+    },
+    color:{
+      r:255,
+      g:255,
+      b:255
+    }
+  });
+  enemy = [];
+  object = [];
+}
+
+function draw(){
+  image(bgimg, 0, 0, width, height);
+  // background(25);
+
+  // var _maxMsg = `最高分: ${maxPoint}分`;//"最高分: " + maxPoint;
+  // text(_maxMsg, width-textWidth(_maxMsg)-20, height-20);
+
+  player.run(mouseIsPressed, object);
+
+  enemy.map((theEnemy, i) => {
+    theEnemy.run();
+    noStroke();
+    object.map((obj, i)=>{
+      obj.run();
+      var a = theEnemy, b = obj;
+      if((a.x>=b.x-a.size&&a.x<=b.x+a.size)&&a.y>=b.y){
+        score+=17-theEnemy.size;
+        theEnemy.distory = true;
+        obj.distory = true;
+      }
+      if(obj.distory)
+        object.splice(i, 1);
+    });
+    stroke(0,0,100);
+
+    if(
+      (theEnemy.x>=player.x-player.fw/2&&theEnemy.x<=player.x+player.fw/2)&&
+      (theEnemy.y>=player.y-player.fw*.4&&theEnemy.y<=player.y+player.fw*.4)
+    ){
+      if(score>maxPoint)
+        maxPoint = score;
+      if(player.moveSpeed>0){
+        player.face = "   ╥＿╥ ";
+      }else if(player.moveSpeed<0){
+        player.face = " ╥＿╥   ";
+      }else{
+        player.face = "   ☍＿⁰  "
+        // player.face = "   ☍﹏⁰  "
+        // player.face = "  ´ﾟдﾟ`  "
+        // player.face = "   ´ ω `   "
+      }
+      if(start){
+        backgroundMusic.stop();
+        var t = ~~((new Date()-time)/1000);
+        endTime = `${t/60>=1?~~(t/60)+'m:':''}${t%60+'s'}`;
+      }
+      start = false;
+    }
+      
+    if(theEnemy.distory)
+      enemy.splice(i, 1);
+  });
+  if(start){
+    textSize(24);
+    fill(255);
+    var t = ~~((new Date()-time)/1000);
+    var msg = `分數: ${score}, 遊戲時間:${t/60>=1?~~(t/60)+'m:':''}${t%60+'s'}`;
+    if(t==120&&start){
+      setTimeout(backgroundMusic.stop, 2000);
+      endTime = `2m`;
+      start = false;
+      player.moveSpeed = 0;
+    }
+    text(msg, width/2-textWidth(msg)/2, 50);
+    if(player.distory==true)
+      start = false;
+    if(enemy.length<10&&(Math.random()>.8&&enemy.length<25)){
+      enemy.push(new enemyObject({
+        x:~~(Math.random()*width),
+        y:0,
+        width:width,
+        height:height,
+        size:(~~(Math.random()*9)+8),
+        speed:(~~(Math.random()*3)+3),
+        direction:{
+          x:0,
+          y:1
+        }
+      }));
+    }
+  }else if(!start){
+    fill(255, 255, 255);
+    textSize(24);
+    var startButtonMsg = '按 K 鍵開始遊戲';
+    var controlMsg = '\nA、D控制左右, 滑鼠左鍵射擊\n';
+    text(startButtonMsg, width/2-textWidth(startButtonMsg)/2, 50);
+    text(controlMsg, width/2-textWidth(controlMsg)/2, 50);
+    var result = `分數:${score}, 上次遊玩時數:${endTime}`;
+    var justLazy = endTime=='2m'?"\n恭喜完成遊戲":'';
+    text(result+justLazy, width/2-textWidth(result)/2, 150);
+  }
+
+  if(keyIsPressed){
+    if(key.toLowerCase()=='k'&&!start){
+      backgroundMusic.play();
+      player.moveSpeed = 0;
+      time = new Date();
+      enemy = [];
+      object = [];
+      score = 0;
+      start = true;
+    }
+    if(key=='Q'){
+      enemy.push(new enemyObject({
+        x:~~(Math.random()*width),
+        y:0,
+        width:width,
+        height:height,
+        size:(~~(Math.random()*10)+15),
+        speed:2,
+        direction:{
+          x:0,
+          y:1
+        }
+      }));
+    }
+    if(key=='P'){
+      backgroundMusic.stop();
+      start = false;
+    }
+    // if(key=='U')
+      // enemy = [];
+  }
+}
+
+function actor(setting){
+  this.face = "  ・ω・  ";
+  // this.face = "_(:3 」∠ )_";
+  this.fw = textWidth(this.face);
+  this.map = {
+    width:setting.width,
+    height:setting.height
+  }
+  this.faceUp = 0;
+  this.x = setting.width/2;
+  this.y = setting.height-2*setting.size;
+  this.size = setting.size;
+  this.movement = {
+    left:setting.movement.left||'a',
+    right:setting.movement.right||'d'
+  }
+  this.moveSpeed = 0;
+  // setting.color = setting.color||{};
+  // setting.color.r = setting.color.r||255;
+  // this.color = {
+    // r:setting.color.r,
+    // g:setting.color.g,
+    // b:setting.color.b
+  // }
+  this.distory = false;
+}
+
+actor.prototype.run = function(attackStatus, attackObject){
+  this.move(true);
+  this.attack(attackStatus, attackObject);
+  this.display();
+}
+
+actor.prototype.move = function(direction, release = false){
+  if((direction===this.movement.left||direction===this.movement.right||direction==='r')&&release){
+    this.moveSpeed = 0;
+    this.face = "  ・ω・  ";
+  }else if(direction===this.movement.left&&!release){
+    this.moveSpeed = this.moveSpeed>0?-this.size/5:(Math.max((this.moveSpeed-this.size/10), -this.size/10));
+    //(╥﹏╥)
+    // this.face = ",╥﹏╥,,,";
+    this.face = " ・ω・   ";
+  }else if(direction===this.movement.right&&!release){
+    this.moveSpeed = this.moveSpeed<0?this.size/5:(Math.min((this.moveSpeed+this.size/10), this.size/10));
+    // this.face = ",,,╥﹏╥,"
+    this.face = "   ・ω・ "
+  }else if((direction=='w'||direction=='s')&&release){
+    console.log(direction)
+    this.faceUp = 0;
+  }else if(direction=='r'){
+    this.face = "  Σ;ﾟдﾟ ";
+  }else if(direction=='w'){
+    this.faceUp = -3;
+  }else if(direction=='s'){
+    this.faceUp = 3;
+  }
+  if(this.x+this.moveSpeed>this.map.width)
+    this.x = this.map.width-this.size/2;
+  else if(this.x+this.moveSpeed<0)
+    this.x = this.size/2;
+  else
+    this.x+=this.moveSpeed
+}
+
+actor.prototype.attack = function(status, putArr){
+  if(!start)return;
+  if(this.reload>0){
+    this.reload--;
+  }else if(status){
+    sound.shot1.setVolume(0.1);
+    sound.shot1.play();
+    this.reload = 10;
+    putArr.push(new bulletObject({
+      x:this.x,
+      y:this.y,
+      speed:this.size/2,
+      width:this.map.width,
+      height:this.map.height,
+      direction:{
+        x:0,
+        y:-1
+      }
+    }));
+  }
+}
+
+actor.prototype.display = function(){
+  // console.log(this.color);
+  // var face = ",,・ω・,,";
+  // fill(this.color.r, this.color.g, this.color.b);
+  textSize(12);
+  fill(255, 255, 255);
+  // ellipse(this.x, this.y, this.size*1.25, this.size);
+  // var fw = textWidth(face);
+  ellipse(this.x, this.y, this.fw, this.fw*.8);
+  // fill(255-this.color.r, 255-this.color.g, 255-this.color.b);
+  fill(0, 0, 0);
+  text(this.face, this.x-this.fw/2, this.y+3+this.faceUp);
+  // var 頭髮 = ",,,", 頭髮長度 = textWidth(頭髮);
+  // text()
+}
+
+function bulletObject(setting){
+  this.x = setting.x;
+  this.y = setting.y;
+  this.speed = setting.speed;
+  this.reload = false;
+  this.distory = false;
+  this.direction = {x:setting.direction.x, y:setting.direction.y};
+}
+
+bulletObject.prototype.run = function(){
+  //因為實際上不需要所以註解掉了
+  // this.x+=(this.direction.x*this.speed);
+  this.y+=(this.direction.y*this.speed);
+  if(this.x<0||this.x>width||this.y<0||this.y>height){
+    this.distory = true;
+  }
+  this.display();
+}
+
+bulletObject.prototype.display = function(){
+  fill(41, 148, 255);
+  ellipse(this.x, this.y, 5, 10);
+}
+
+function enemyObject(setting){
+  this.x = setting.x;
+  this.y = setting.y;
+  this.map = {
+    width:setting.width,
+    height:setting.height
+  }
+  this.size = setting.size;
+  this.speed = setting.speed;
+  this.distory = false;
+  this.direction = {
+    x:setting.direction.x,
+    y:setting.direction.y
+  }
+}
+
+enemyObject.prototype.run = function(){
+  //因為實際上不需要所以註解掉了
+  // this.x+=(this.direction.x*this.speed);
+  if(start){
+    this.y+=(this.direction.y*this.speed);
+    if(this.x<0||this.x>width||this.y<0||this.y>height){
+      this.distory = true;
+    }
+  }
+  this.display();
+}
+
+enemyObject.prototype.display = function(){
+  fill(0);
+  stroke(255)
+  // strokeWidth
+  // strokeWeight(3);
+  ellipse(this.x, this.y, this.size, this.size);
+  // strokeWeight(1); 
+}
+
+function keyControl(event){
+  if(!start)return;
+  var key = event.key.toLowerCase();
+  player.move(key);
+}
+function keyRelease(event){
+  if(!start)return;
+  player.move(event.key.toLowerCase(), true);
+}
+window.onkeyup = keyRelease
+window.onkeydown = keyControl;
+</script>
+</head>
+<body>
+<p style="position:absolute;top:5px;right:10px">
+  <a href="javascript:if(backgroundMusic.play)backgroundMusic.play()">Play</a>
+  <a href="javascript:if(backgroundMusic.stop)backgroundMusic.stop()">Stop</a>
+</p>
+</body>
+</html>

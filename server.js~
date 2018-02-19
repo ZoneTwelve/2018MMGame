@@ -1,0 +1,63 @@
+const http = require('http'),
+      __url = require('url'),
+      fs = require('fs');
+var temp = [];
+var access = new Object;
+
+settingAccess(access);
+http.createServer(function(req, res){
+  var source;
+  var url = __url.parse(req.url, true);
+
+  if(url.pathname.split("/").pop()=='')
+    url.pathname+='index.html';
+
+  console.log(req.method, url.pathname);
+
+  if(access[url.pathname]==="disable"||url.pathname.indexOf('.access'))
+    return res.end("403 Forbidden");
+  else if(access[url.pathname]!=undefined){
+    return res.end(access[url.pathname]);
+  }
+  
+  fs.readFile(__dirname+url.pathname, function(error, buffer){
+    if(error)return res.end("404 Not Found");
+    res.end(buffer);
+    // if(temp.length>10){
+      // var target = temp.shift();
+      // temp[target] = undefined;
+    // }
+    // temp[temp.length] = url.pathname;
+    // temp[url.pathname] = buffer;
+  });
+
+  /*
+  if(temp[url.pathname]==undefined){
+    source = "F";
+    fs.readFile(__dirname+url.pathname, function(error, buffer){
+      if(error)return res.end("404 Not Found");
+      res.end(buffer);
+      if(temp.length>10){
+        var target = temp.shift();
+        temp[target] = undefined;
+      }
+      temp[temp.length] = url.pathname;
+      temp[url.pathname] = buffer;
+    });
+  }else{
+    source = "M";
+    res.end(temp[url.pathname]);
+  } */
+}).listen(80, function(){
+  console.log("Server listen on 80 port");
+});
+
+
+function settingAccess(v){
+  if(!v)throw console.log("請輸入變數");
+  var accessFile = fs.readFileSync('.access', 'utf8').split(/\r\n|\n/i);
+  accessFile.map(a => {
+    a = a.split(' ');
+    v[a[1]] = a[0];
+  });
+}
