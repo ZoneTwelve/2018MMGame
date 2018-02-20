@@ -76,6 +76,8 @@ function setup(){
 }
 
 function draw(){
+  if(points>maxScore)
+    maxScore = points;
   image(bg, 0, 0);
   // background(255);
   // fill("#FFFAFA");
@@ -103,6 +105,10 @@ function draw(){
     time--;
     var lastTime = Math.ceil(time/50);
     var source = `剩餘時間: ${lastTime} 秒, 總分: ${points}`;
+    // fill(255);
+    // text(source, width/2-textWidth(source)/2-1, 50-1);
+    // text(source, width/2-textWidth(source)/2+1, 50+1);
+    // fill(0)
     text(source, width/2-textWidth(source)/2, 50);
     if(object.length<20&&Math.random()>0.9){
       object.push(new showBall({
@@ -126,8 +132,6 @@ function draw(){
       })
     }
     if(lastTime<=0){
-      if(points>maxScore)
-        maxScore = points;
       endTime = new Date();
       start = false;
     }
@@ -320,7 +324,7 @@ showBall.prototype.display = function(){
 function foodObject(setting){
   this.x = setting.x;
   this.y = setting.y;
-  this.points = ~~(Math.random()*25);
+  this.points = ~~(Math.random()*20)+5;
   this.distory = false;
 }
 
