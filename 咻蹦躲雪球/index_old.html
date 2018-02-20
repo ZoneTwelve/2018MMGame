@@ -44,7 +44,7 @@ function preload() {
   coreKey = loadStrings("/core");
   bg = loadImage("/咻蹦躲雪球/background.jpg");
   // fontStyle = loadFont("/font/8-BIT_WONDER.TTF");
-  fontStyle = loadFont("/font/JFDotElisa8.ttf");
+  fontStyle = loadFont("/font/JF-Dot-Elisa8.TTF");
   bgsound = loadSound("/咻蹦躲雪球/Happy_Little_Elves.mp3");
 }
 
@@ -88,6 +88,7 @@ function draw(){
   player.run(start);
   fill(255);
   // stroke(255);
+  ellipse(10, 10, 10,10);
   object.map((obj, i) => {
     obj.run(start);
     if(obj.y>player.y-player.size*0.65/2&&obj.y<player.y+player.size*0.65/2&&obj.x>player.x-player.size/2&&obj.x<player.x+player.size/2){
